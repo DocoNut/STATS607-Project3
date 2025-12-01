@@ -1,5 +1,5 @@
 {
-  "sample_size": 200,
+  "sample_size": 1000,
   "base_bandwidth": 0.2,
   "bandwidth_coefficients": [
     1,

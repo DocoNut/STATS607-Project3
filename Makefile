@@ -1,25 +1,46 @@
-VENV   := .venv
-PY     := $(VENV)/bin/python3
-PIP    := $(VENV)/bin/pip3
+# Config
+ENV_NAME := my_project_env
+# Adjust this specific path if your envs are stored elsewhere (e.g. ~/anaconda3/envs)
+ENV_PYTHON := /usr/local/anaconda/envs/$(ENV_NAME)/bin/python
+ENV_PIP    := /usr/local/anaconda/envs/$(ENV_NAME)/bin/pip
 
-.PHONY: all simulate venv install clean test
+.PHONY: all create-env install simulate test clean profile complexity benchmark parallel stability-check
 
 all: simulate
 
-venv:
-	@test -d $(VENV) || python3 -m venv $(VENV)
+# --- Environment ---
+create-env:
+	conda create -y -n $(ENV_NAME) python=3.11
 
-install: venv
-	@$(PIP) -q install -U pip
-	@test -f requirements.txt && $(PIP) -q install -r requirements.txt || true
+install:
+	$(ENV_PIP) install -q -U pip
+	@test -f requirements.txt && $(ENV_PIP) install -q -r requirements.txt || true
 
+# --- Main Tasks ---
 simulate: install
-	@$(PY) -m src.simulation
+	$(ENV_PYTHON) -m src.simulation
 
 test: install
-	@$(PY) -m tests.function_test
-	@$(PY) -m tests.data_test
-	@$(PY) -m tests.reproducibility_test
+	$(ENV_PYTHON) -m tests.function_test
+	$(ENV_PYTHON) -m tests.data_test
+	$(ENV_PYTHON) -m tests.reproducibility_test
 
+# --- Analysis Tasks ---
+profile: install
+	$(ENV_PYTHON) -m src.simulation --profile_mode
+
+complexity: install
+	$(ENV_PYTHON) scripts/plot_complexity.py
+
+benchmark: install
+	$(ENV_PYTHON) scripts/plot_benchmark.py
+
+parallel: install
+	$(ENV_PYTHON) src/simulation.py --parallel --n_cores 4
+
+stability-check: install
+	$(ENV_PYTHON) scripts/check_stability.py
+
+# --- Cleanup ---
 clean:
-	@rm results/raw/* results/figures/*
+	rm -f results/raw/* results/figures/* *.prof *.log

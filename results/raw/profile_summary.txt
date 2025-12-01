@@ -1,0 +1,17 @@
+[PROFILE] Total runtime: 6.501133 seconds
+[PROFILE] Per-component times (total / per-experiment):
+  eval_akde   : total = 5.938132s, avg/exp = 0.659792s
+  plot        : total = 0.318143s, avg/exp = 0.035349s
+  eval_mkde   : total = 0.093105s, avg/exp = 0.010345s
+  eval_dde    : total = 0.055451s, avg/exp = 0.006161s
+  akde_build  : total = 0.049118s, avg/exp = 0.005458s
+  eval_kde    : total = 0.023639s, avg/exp = 0.002627s
+  write_data  : total = 0.008523s, avg/exp = 0.000947s
+  eval_true   : total = 0.001035s, avg/exp = 0.000115s
+  data_gen    : total = 0.000364s, avg/exp = 0.000040s
+  sampler_init: total = 0.000168s, avg/exp = 0.000019s
+  imse        : total = 0.000081s, avg/exp = 0.000009s
+  kde_build   : total = 0.000021s, avg/exp = 0.000002s
+  mkde_build  : total = 0.000017s, avg/exp = 0.000002s
+  get_pdf     : total = 0.000012s, avg/exp = 0.000001s
+  dde_build   : total = 0.000011s, avg/exp = 0.000001s
