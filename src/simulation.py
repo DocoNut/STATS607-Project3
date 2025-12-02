@@ -8,6 +8,24 @@ from tqdm.auto import tqdm
 import time
 import sys
 
+class FileLog:
+    def __init__(self, filename):
+        self.f = open(filename, 'w')
+    
+    def write(self, message):
+        self.f.write(message + '\n') # Add newline for readability
+        self.f.flush() # Ensure it writes immediately
+
+# 1. create your logging object
+log_file = FileLog('numpy_errors.log')
+
+# 2. Tell numpy to send errors to this object
+np.seterrcall(log_file)
+
+# 3. Tell numpy to use the 'log' mode
+# Note: We use 'log' instead of 'warn' here. 
+# 'warn' prints to stderr; 'log' sends it to the object set in seterrcall.
+np.seterr(all='log')
 
 def main():
     """main function"""

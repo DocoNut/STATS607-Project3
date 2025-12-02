@@ -30,7 +30,7 @@ profile: install
 	$(ENV_PYTHON) -m src.simulation --profile_mode
 
 complexity: install
-	$(ENV_PYTHON) scripts/plot_complexity.py
+	$(ENV_PYTHON) -m src.runtime_baseline
 
 benchmark: install
 	$(ENV_PYTHON) scripts/plot_benchmark.py
