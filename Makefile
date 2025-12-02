@@ -33,14 +33,13 @@ complexity: install
 	$(ENV_PYTHON) -m src.runtime_baseline
 
 benchmark: install
-	$(ENV_PYTHON) scripts/plot_benchmark.py
+	$(ENV_PYTHON) -m src.comparison
 
 parallel: install
-	$(ENV_PYTHON) src/simulation.py --parallel --n_cores 4
+	$(ENV_PYTHON) -m src.simulation --parallel --profile_mode
 
-stability-check: install
-	$(ENV_PYTHON) scripts/check_stability.py
-
+test_regression: install
+	$(ENV_PYTHON) -m tests.regression_test
 # --- Cleanup ---
 clean:
 	rm -f results/raw/* results/figures/* *.prof *.log

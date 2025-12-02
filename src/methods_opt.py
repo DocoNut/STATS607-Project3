@@ -1,78 +1,42 @@
 import numpy as np
-from scipy.stats import f, norm
-
-def kernel_gaussian(z: float) -> float:
-    """
-    Standard Gaussian kernel.
-
-    Args:
-        z (float): Input value.
-
-    Returns:
-        float: Kernel value at z.
-    """
-    return np.exp(-z * z / 2) / np.sqrt(2 * np.pi)
-
-
-def kernel_derivative(z: float) -> float:
-    """
-    First derivative of the Gaussian kernel.
-
-    Args:
-        z (float): Input value.
-
-    Returns:
-        float: Derivative value at z.
-    """
-    return -z * kernel_gaussian(z)
-
-
-def kernel_second_derivative(z: float) -> float:
-    """
-    Second derivative of the Gaussian kernel.
-
-    Args:
-        z (float): Input value.
-
-    Returns:
-        float: Second derivative value at z.
-    """
-    return (z * z - 1) * kernel_gaussian(z)
-
 
 def kde(h: float, data: np.ndarray):
     """
-    Construct a kernel density estimator (KDE) function with Gaussian kernel.
-
-    Args:
-        h (float): Bandwidth parameter.
-        data (np.ndarray): 1D sample points.
-
-    Returns:
-        callable: Function f(y) that estimates density at y.
+    Vectorized Kernel Density Estimator.
+    Faster execution using NumPy broadcasting.
     """
+    # 
+    
     if not isinstance(h, (int, float)):
         raise TypeError("h is not number")
-    
-    if not isinstance(data, np.ndarray):
-        raise TypeError("data is not np.ndarray")
-    
     if h <= 0:
-        raise ValueError("bandwidth should be greater than 0")
+        raise ValueError("bandwidth > 0 required")
     
+    data = np.asarray(data)
     n = len(data)
-    if n < 0:
+    if n == 0:
         raise ValueError("data is empty")
 
-    def density(y: float) -> float:
-        # Sum contributions from each data point
-        total = 0.0
-        for xi in data:
-            total += kernel_gaussian((y - xi) / h) / (n * h)
-        return total
+    def density(y):
+        # Convert y to array to allow broadcasting
+        # Shape becomes (M, 1)
+        y_vec = np.atleast_1d(y)[:, None]
+        
+        # Broadcasting: (M, 1) - (1, N) -> (M, N) difference matrix
+        u = (y_vec - data[None, :]) / h
+        
+        # Vectorized Gaussian calculation
+        kernels = (1 / np.sqrt(2 * np.pi)) * np.exp(-0.5 * u**2)
+        
+        # Sum across rows (axis=1) to get density for each y
+        result = np.sum(kernels, axis=1) / (n * h)
+        
+        # Return scalar if input was scalar, else array
+        if np.isscalar(y):
+            return result[0]
+        return result
 
     return density
-
 
 def multi_kde(h: float, data: np.ndarray, bandwidth_coef: np.ndarray, d: int = 2, lam: float = 0):
     """
@@ -138,75 +102,50 @@ def multi_kde_n0(h: float, data: np.ndarray, bandwidths: np.ndarray, d: int = 2,
 
 def plugin_kde(h: float, data: np.ndarray):
     """
-    Construct a plug-in kernel density estimator (KDE) with bias correction.
-
-    Args:
-        h (float): Bandwidth parameter.
-        data (np.ndarray): 1D array of sample points.
-
-    Returns:
-        callable: Function f(y) that estimates density at y.
+    Vectorized Plug-in Kernel Density Estimator with bias correction.
     """
     if not isinstance(h, (int, float)):
         raise TypeError("h is not number")
-    
-    if not isinstance(data, np.ndarray):
-        raise TypeError("data is not np.ndarray")
-    
     if h <= 0:
-        raise ValueError("bandwidth should be greater than 0")
+        raise ValueError("bandwidth > 0 required")
     
+    data = np.asarray(data)
     n = len(data)
-    if n < 0:
+    if n == 0:
         raise ValueError("data is empty")
 
-    def density(y: float) -> float:
-        total = 0.0
-        for xi in data:
-            # Standard Gaussian KDE term minus a second-derivative correction
-            total += (
-                kernel_gaussian((y - xi) / h) / (n * h)
-                - 0.5 * kernel_second_derivative((y - xi) / h) / (n * h)
-            )
-        return total
+    def density(y):
+        # 1. Broadcasting setup
+        # y_vec: (M, 1), data: (1, N) -> u: (M, N)
+        y_vec = np.atleast_1d(y)[:, None]
+        u = (y_vec - data[None, :]) / h
+        
+        # 2. Vectorized Kernel Calculations
+        # Standard Gaussian: (1/sqrt(2pi)) * exp(-0.5 * u^2)
+        gauss_term = (1 / np.sqrt(2 * np.pi)) * np.exp(-0.5 * u**2)
+        
+        # Second derivative of Gaussian: (u^2 - 1) * Gaussian
+        # This formula assumes the standard normal kernel K(u)
+        deriv_term = (u**2 - 1) * gauss_term
+
+        # 3. Combine terms (Plug-in formula)
+        # Formula: K(u) - 0.5 * K''(u)
+        # Note: Both terms are divided by (n*h)
+        contributions = (gauss_term - 0.5 * deriv_term) / (n * h)
+        
+        # 4. Sum across data points
+        result = np.sum(contributions, axis=1)
+
+        if np.isscalar(y):
+            return result[0]
+        return result
 
     return density
-
 
 def adaptive_kde(h: float, data: np.ndarray):
     """
-    Construct an adaptive kernel density estimator (KDE),
-    where the bandwidth varies depending on local density.
-
-    Args:
-        h (float): Initial bandwidth parameter.
-        data (np.ndarray): 1D array of sample points.
-
-    Returns:
-        callable: Function f(y) that estimates density at y.
+    Vectorized Adaptive Kernel Density Estimator with bias correction.
     """
-    n = len(data)
-
-    # Standard KDE for global density estimation
-    f = kde(h, data)
-
-    # Global density factor (geometric mean of densities)
-    G = np.exp(np.sum(np.log(f(data))) / n)
-
-    def density(y: np.ndarray) -> np.ndarray:
-        if np.isscalar(y):
-            y = np.array([y])
-        total = np.zeros(len(y))
-        for xi in data:
-            # Local bandwidth scaling factor
-            lam = np.sqrt(G / f(xi))
-            # Contribution from each data point
-            total += kernel_gaussian((y - xi) / (lam * h)) / (h * lam)
-        return total / n
-
-    return density
-
-def adaptive_kde_opt(h: float, data: np.ndarray):
     n = len(data)
     f = kde(h, data)
 

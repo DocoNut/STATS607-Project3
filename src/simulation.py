@@ -3,10 +3,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import json
 from src.dgps import DistributionSampler
-from src.methods import kde, multi_kde_n0 as multi_kde, adaptive_kde, plugin_kde
 from tqdm.auto import tqdm
 import time
 import sys
+
+if '--parallel' in sys.argv:
+    print("Loading OPTIMIZED (Parallel) methods...")
+    from src.methods_opt import kde, multi_kde_n0 as multi_kde, adaptive_kde, plugin_kde
+else:
+    print("Loading STANDARD (Sequential) methods...")
+    # Assuming the non-optimized versions are in src.methods
+    from src.methods import kde, multi_kde_n0 as multi_kde, adaptive_kde, plugin_kde
 
 class FileLog:
     def __init__(self, filename):
@@ -17,7 +24,7 @@ class FileLog:
         self.f.flush() # Ensure it writes immediately
 
 # 1. create your logging object
-log_file = FileLog('numpy_errors.log')
+log_file = FileLog('results/raw/numpy_errors.log')
 
 # 2. Tell numpy to send errors to this object
 np.seterrcall(log_file)
@@ -209,7 +216,11 @@ def main():
         print("".join(lines))
 
         # also write to file
-        profile_path = raw_dir + "profile_summary.txt"
+        if '--parallel' in sys.argv:
+            filename = "profile_summary_para.txt"
+        else:
+            filename = "profile_summary_baseline.txt"
+        profile_path = raw_dir + filename
         with open(profile_path, "w") as f:
             f.writelines(lines)
 
